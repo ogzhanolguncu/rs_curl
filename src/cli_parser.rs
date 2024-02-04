@@ -24,17 +24,17 @@ pub fn parser() -> Result<UrlSections, &'static str> {
     return Ok(parsed_url);
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct UrlSections {
-    protocol: String,
-    host: String,
-    port: Option<u16>,
-    path: String,
+    pub protocol: String,
+    pub host: String,
+    pub port: Option<u16>,
+    pub path: String,
 }
 
 fn parse_url(url: String) -> Result<UrlSections, &'static str> {
     let pattern =
-        Regex::new(r"(?P<protocol>https?)://(?P<host>[^:/]+)(?::(?P<port>\d+))?(/(?P<path>.*))?");
+        Regex::new(r"(?P<protocol>https?)://(?P<host>[^:/]+)(?::(?P<port>\d+))?(?P<path>/.*)?");
 
     match pattern {
         Ok(res) => {
@@ -74,7 +74,7 @@ mod tests {
             parse_url(url).unwrap(),
             UrlSections {
                 host: "ogzhanolguncu.com".to_string(),
-                path: "best-typescript-types".to_string(),
+                path: "/best-typescript-types".to_string(),
                 protocol: "http".to_string(),
                 port: Some(80)
             }
