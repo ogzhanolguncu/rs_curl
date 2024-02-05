@@ -21,13 +21,10 @@ pub fn parser() -> Result<ParsedArgs, &'static str> {
     let parsed_url = parse_url(args.url.clone())?;
     let is_verbose = args.verbose;
     println!("connecting to {}", args.url);
-    println!(
-        "Sending request {} {} {}",
-        "GET", parsed_url.path, "HTTP/1.1"
-    );
-    println!("Host: {}", parsed_url.host);
-    println!("Accept: */*",);
-    println!("");
+    println!("> {} {} {}", "GET", parsed_url.path, "HTTP/1.1");
+    println!("> Host: {}", parsed_url.host);
+    println!("> Accept: */*",);
+    println!(">");
 
     return Ok(ParsedArgs {
         url_sections: parsed_url,

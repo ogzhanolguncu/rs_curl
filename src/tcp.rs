@@ -1,6 +1,5 @@
 use std::error::Error;
 
-use serde::{Deserialize, Serialize};
 use serde_json::{to_string_pretty, Value};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -33,8 +32,10 @@ pub async fn make_call_to(req: ParsedArgs) -> Result<String, Box<dyn Error>> {
     let mut buffer = Vec::new();
     stream.read_to_end(&mut buffer).await?;
 
-    let response = String::from_utf8_lossy(&buffer);
+    let mut response = String::from_utf8_lossy(&buffer).to_string();
+
     if verbose {
+        response = add_incoming_sign(&response);
         println!("{}", response);
     } else {
         if let Some(response) = remove_headers(&response) {
@@ -42,10 +43,22 @@ pub async fn make_call_to(req: ParsedArgs) -> Result<String, Box<dyn Error>> {
         }
     }
 
-    Ok(response.into_owned())
+    Ok(response)
 }
 
-fn remove_headers(response: &std::borrow::Cow<'_, str>) -> Option<String> {
+fn add_incoming_sign(response: &str) -> String {
+    let mut final_str = String::new();
+    if let Some((info, json)) = split_http_response(response.to_string().as_str()) {
+        for line in info.lines() {
+            final_str.push_str(&format!("< {}\n", line));
+        }
+        final_str.push_str("<\n");
+        final_str.push_str(json);
+    }
+    final_str
+}
+
+fn remove_headers(response: &str) -> Option<String> {
     if let Some(json_start) = response.find('{') {
         let json_str = &response[json_start..];
 
@@ -62,6 +75,10 @@ fn remove_headers(response: &std::borrow::Cow<'_, str>) -> Option<String> {
     } else {
         None
     }
+}
+
+fn split_http_response(http_response: &str) -> Option<(&str, &str)> {
+    http_response.split_once("\r\n\r\n")
 }
 
 #[cfg(test)]
@@ -100,5 +117,21 @@ mod tests {
         .await
         .unwrap()
         .contains("headers"));
+    }
+
+    #[tokio::test]
+    async fn should_prepend_less_than_to_verbose_headers() {
+        assert!(make_call_to(ParsedArgs {
+            url_sections: UrlSections {
+                protocol: "http".to_string(),
+                host: "httpbin.org".to_string(),
+                port: Some(80),
+                path: "/get".to_string()
+            },
+            verbose: true
+        })
+        .await
+        .unwrap()
+        .contains("<"));
     }
 }
