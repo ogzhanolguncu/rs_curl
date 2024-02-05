@@ -6,12 +6,20 @@ use regex::Regex;
 struct Args {
     #[arg(short, long)]
     url: String,
+
+    #[arg(short, long)]
+    verbose: bool,
 }
 
-pub fn parser() -> Result<UrlSections, &'static str> {
+pub struct ParsedArgs {
+    pub url_sections: UrlSections,
+    pub verbose: bool,
+}
+
+pub fn parser() -> Result<ParsedArgs, &'static str> {
     let args: Args = Args::parse();
     let parsed_url = parse_url(args.url.clone())?;
-
+    let is_verbose = args.verbose;
     println!("connecting to {}", args.url);
     println!(
         "Sending request {} {} {}",
@@ -21,7 +29,10 @@ pub fn parser() -> Result<UrlSections, &'static str> {
     println!("Accept: */*",);
     println!("");
 
-    return Ok(parsed_url);
+    return Ok(ParsedArgs {
+        url_sections: parsed_url,
+        verbose: is_verbose,
+    });
 }
 
 #[derive(PartialEq, Debug, Clone)]
