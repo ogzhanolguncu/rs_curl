@@ -845,11 +845,12 @@ name = "rs_curl"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "native-tls",
  "pretty_assertions_sorted",
  "regex",
  "reqwest",
- "serde_json",
  "tokio",
+ "tokio-native-tls",
 ]
 
 [[package]]

@@ -1,13 +1,15 @@
 use std::error::Error;
 
+use native_tls::TlsConnector as NativeTlsConnector;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
 };
+use tokio_native_tls::TlsConnector;
 
 use crate::cli_parser::ParsedArgs;
 
-const DEFAULT_PORT: u16 = 80;
+const DEFAULT_PORT: u16 = 443;
 
 pub async fn make_call_to(req: ParsedArgs) -> Result<String, Box<dyn Error>> {
     let ParsedArgs {
@@ -18,7 +20,14 @@ pub async fn make_call_to(req: ParsedArgs) -> Result<String, Box<dyn Error>> {
         header,
     } = req;
     let port = url_sections.port.unwrap_or_else(|| DEFAULT_PORT);
-    let mut stream = TcpStream::connect(format!("{}:{}", url_sections.host, port)).await?;
+
+    let stream = TcpStream::connect(format!("{}:{}", url_sections.host, port)).await?;
+
+    let connector = NativeTlsConnector::new().unwrap();
+    let connector = TlsConnector::from(connector);
+
+    let domain = url_sections.host.as_str();
+    let mut stream = connector.connect(domain, stream).await?;
 
     let request = format!(
         "{} {} HTTP/1.1\r\n\
@@ -38,6 +47,7 @@ pub async fn make_call_to(req: ParsedArgs) -> Result<String, Box<dyn Error>> {
         )),
         data.unwrap_or_default()
     );
+
     stream.write_all(request.as_bytes()).await?;
 
     let mut buffer = Vec::new();
