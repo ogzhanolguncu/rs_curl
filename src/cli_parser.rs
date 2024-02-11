@@ -1,4 +1,6 @@
-use clap::{command, Parser};
+use core::fmt;
+
+use clap::{command, Parser, ValueEnum};
 use regex::Regex;
 
 #[derive(Parser, Debug)]
@@ -9,26 +11,41 @@ struct Args {
 
     #[arg(short, long)]
     verbose: bool,
+
+    #[arg(short, long,value_enum, default_value_t=METHOD::GET)]
+    x: METHOD,
+}
+
+#[derive(ValueEnum, Clone, Debug)]
+pub enum METHOD {
+    DELETE,
+    GET,
+    POST,
+    PUT,
 }
 
 pub struct ParsedArgs {
     pub url_sections: UrlSections,
     pub verbose: bool,
+    pub method: METHOD,
 }
 
 pub fn parser() -> Result<ParsedArgs, &'static str> {
     let args: Args = Args::parse();
     let parsed_url = parse_url(args.url.clone())?;
     let is_verbose = args.verbose;
+    let method = args.x;
+
     println!("connecting to {}", args.url);
-    println!("> {} {} {}", "GET", parsed_url.path, "HTTP/1.1");
-    println!("> Host: {}", parsed_url.host);
-    println!("> Accept: */*",);
-    println!(">");
+    println!("{} {} {}", method, parsed_url.path, "HTTP/1.1");
+    println!("Host: {}", parsed_url.host);
+    println!("Accept: */*",);
+    println!("");
 
     return Ok(ParsedArgs {
         url_sections: parsed_url,
         verbose: is_verbose,
+        method,
     });
 }
 
@@ -102,5 +119,11 @@ mod tests {
                 port: None
             }
         )
+    }
+}
+
+impl fmt::Display for METHOD {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
     }
 }

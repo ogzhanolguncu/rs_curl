@@ -14,17 +14,20 @@ pub async fn make_call_to(req: ParsedArgs) -> Result<String, Box<dyn Error>> {
     let ParsedArgs {
         url_sections,
         verbose,
+        method,
     } = req;
     let port = url_sections.port.unwrap_or_else(|| DEFAULT_PORT);
     let mut stream = TcpStream::connect(format!("{}:{}", url_sections.host, port)).await?;
 
     let request = format!(
-        "GET {} HTTP/1.1\r\n\
+        "{} {} HTTP/1.1\r\n\
                        Host: {} \r\n\
                        Accept: */*\r\n\
                        Connection: close\r\n\
                        \r\n",
-        url_sections.path, url_sections.host
+        method.to_string(),
+        url_sections.path,
+        url_sections.host
     );
 
     stream.write_all(request.as_bytes()).await?;
@@ -58,20 +61,11 @@ fn add_incoming_sign(response: &str) -> String {
     final_str
 }
 
-fn remove_headers(response: &str) -> Option<String> {
+fn remove_headers(response: &str) -> Option<&str> {
     if let Some(json_start) = response.find('{') {
         let json_str = &response[json_start..];
 
-        let mut parsed: serde_json::Value =
-            serde_json::from_str(json_str).expect("JSON parsing error");
-
-        // Remove the "headers" key from the JSON data
-        if let Value::Object(ref mut obj) = parsed {
-            obj.remove("headers");
-        }
-
-        let pretty_json = to_string_pretty(&parsed).expect("Failed to serialize to pretty string");
-        Some(pretty_json)
+        Some(json_str)
     } else {
         None
     }
@@ -83,7 +77,7 @@ fn split_http_response(http_response: &str) -> Option<(&str, &str)> {
 
 #[cfg(test)]
 mod tests {
-    use crate::cli_parser::UrlSections;
+    use crate::cli_parser::{UrlSections, METHOD};
 
     use super::*;
 
@@ -94,9 +88,10 @@ mod tests {
                 protocol: "http".to_string(),
                 host: "httpbin.org".to_string(),
                 port: Some(80),
-                path: "/get".to_string()
+                path: "/get".to_string(),
             },
-            verbose: false
+            verbose: false,
+            method: METHOD::GET
         })
         .await
         .unwrap()
@@ -112,7 +107,8 @@ mod tests {
                 port: Some(80),
                 path: "/get".to_string()
             },
-            verbose: true
+            verbose: true,
+            method: METHOD::GET
         })
         .await
         .unwrap()
@@ -128,7 +124,8 @@ mod tests {
                 port: Some(80),
                 path: "/get".to_string()
             },
-            verbose: true
+            verbose: true,
+            method: METHOD::GET
         })
         .await
         .unwrap()
