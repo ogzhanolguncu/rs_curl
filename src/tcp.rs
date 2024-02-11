@@ -1,6 +1,5 @@
 use std::error::Error;
 
-use serde_json::{to_string_pretty, Value};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
@@ -15,21 +14,30 @@ pub async fn make_call_to(req: ParsedArgs) -> Result<String, Box<dyn Error>> {
         url_sections,
         verbose,
         method,
+        data,
+        header,
     } = req;
     let port = url_sections.port.unwrap_or_else(|| DEFAULT_PORT);
     let mut stream = TcpStream::connect(format!("{}:{}", url_sections.host, port)).await?;
 
     let request = format!(
         "{} {} HTTP/1.1\r\n\
-                       Host: {} \r\n\
-                       Accept: */*\r\n\
-                       Connection: close\r\n\
-                       \r\n",
+        Host: {} \r\n\
+        {}{} \r\n\
+        Accept: */*\r\n\
+        Connection: close\r\n\
+        \r\n\
+        {}",
         method.to_string(),
         url_sections.path,
-        url_sections.host
+        url_sections.host,
+        header.unwrap_or_default(),
+        data.as_ref().map_or(String::new(), |d| format!(
+            "\r\nContent-Length: {}",
+            d.len()
+        )),
+        data.unwrap_or_default()
     );
-
     stream.write_all(request.as_bytes()).await?;
 
     let mut buffer = Vec::new();
@@ -91,7 +99,9 @@ mod tests {
                 path: "/get".to_string(),
             },
             verbose: false,
-            method: METHOD::GET
+            method: METHOD::GET,
+            data: None,
+            header: None
         })
         .await
         .unwrap()
@@ -108,7 +118,9 @@ mod tests {
                 path: "/get".to_string()
             },
             verbose: true,
-            method: METHOD::GET
+            method: METHOD::GET,
+            data: None,
+            header: None
         })
         .await
         .unwrap()
@@ -125,7 +137,9 @@ mod tests {
                 path: "/get".to_string()
             },
             verbose: true,
-            method: METHOD::GET
+            method: METHOD::GET,
+            data: None,
+            header: None
         })
         .await
         .unwrap()

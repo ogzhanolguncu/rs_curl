@@ -5,12 +5,22 @@ use regex::Regex;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
+#[clap(disable_help_flag = true)]
 struct Args {
     #[arg(short, long)]
     url: String,
 
     #[arg(short, long)]
     verbose: bool,
+
+    #[arg(short, long)]
+    header: Option<String>,
+
+    #[arg(short, long)]
+    data: Option<String>,
+
+    #[arg(long, action = clap::ArgAction::HelpLong)]
+    help: Option<bool>,
 
     #[arg(short, long,value_enum, default_value_t=METHOD::GET)]
     x: METHOD,
@@ -28,6 +38,8 @@ pub struct ParsedArgs {
     pub url_sections: UrlSections,
     pub verbose: bool,
     pub method: METHOD,
+    pub header: Option<String>,
+    pub data: Option<String>,
 }
 
 pub fn parser() -> Result<ParsedArgs, &'static str> {
@@ -35,6 +47,8 @@ pub fn parser() -> Result<ParsedArgs, &'static str> {
     let parsed_url = parse_url(args.url.clone())?;
     let is_verbose = args.verbose;
     let method = args.x;
+    let data = args.data;
+    let header = args.header;
 
     println!("connecting to {}", args.url);
     println!("{} {} {}", method, parsed_url.path, "HTTP/1.1");
@@ -46,6 +60,8 @@ pub fn parser() -> Result<ParsedArgs, &'static str> {
         url_sections: parsed_url,
         verbose: is_verbose,
         method,
+        data,
+        header,
     });
 }
 
